@@ -44,10 +44,10 @@ void sensor_lowSpeed_thread_entry(void* parameter)
 			
 				Sensor.CPU.Temperature = get_cpu_temp();           //获取CPU温度
 				Sensor.PowerSource.Voltage = get_voltage_value();  //获取电源电压值
-			  Sensor.PowerSource.Current = get_current_value();  //获取INA169电流值
-			
-				Sensor.PowerSource.Current = KalmanFilter(&Sensor.PowerSource.Current);//电流值 进行卡尔曼滤波【该卡尔曼滤波调节r的值，滞后性相对较小】
-			
+				if(Sensor.PowerSource.Voltage > 6.0f ){							//当未接入电源时，不检测电流值
+						Sensor.PowerSource.Current = get_current_value();  //获取INA169电流值
+						Sensor.PowerSource.Current = KalmanFilter(&Sensor.PowerSource.Current);//电流值 进行卡尔曼滤波【该卡尔曼滤波调节r的值，滞后性相对较小】
+				}
 				cpu_usage_get(&cpu_usage_major, &cpu_usage_minor); //获取CPU使用率
 				Sensor.CPU.Usage = cpu_usage_major + (float)cpu_usage_minor/100;
 			
@@ -143,7 +143,7 @@ void Depth_Sensor_Data_Convert(void)//深度传感器数据转换
 				Sensor.DepthSensor.PessureValue = Bubble_Filter(value);
 								 				                              /* 深度数值 单位为cm   定标系数为 1.3 单位/cm */
 				Sensor.DepthSensor.Depth = ((Sensor.DepthSensor.PessureValue - Sensor.DepthSensor.Init_PessureValue)/20);		
-			
+			 
 		}
 		else if(MS5837 == Sensor.DepthSensor.Type){ //使用MS5837
 			
@@ -249,36 +249,36 @@ MSH_CMD_EXPORT(set_depth_sensor_type,depth_sensor_type_set <ms5837/spl1301> );
 
 
 /*【电源容量】 修改 【容量】MSH方法 */
-static int set_battery_capacity(int argc, char **argv) //只能是 0~3.0f
+static int set_battery_capacity(int argc, char **argv)
 {
     int result = 0;
     if (argc != 2){ //6个推进器
-        log_e("Error! Proper Usage: propeller_power_set <0~300> % ");
+        log_e("Error! Proper Usage: set_battery_capacity <3s/4s/6s> % ");
 				result = -RT_ERROR;
         goto _exit;
     }
 		
 	  if( !strcmp(argv[1],"3s") ) {
 				 
-				Sensor.PowerSource.Capacity = 12; // 3s->12v的满电压
+				Sensor.PowerSource.Capacity = 4.2*3; // 3s->12.6v的满电压
 				Flash_Update();
 	
-				log_i("Sensor.PowerSource.Capacity :%d v",Sensor.PowerSource.Capacity);
+				log_i("Sensor.PowerSource.Capacity :%f v",Sensor.PowerSource.Capacity);
 		}
 	  else if( !strcmp(argv[1],"4s") ) {
 				 
-				Sensor.PowerSource.Capacity = 16; // 4s->16v的满电压
+				Sensor.PowerSource.Capacity = 4.2*4; // 4s->16.8v的满电压
 				Flash_Update();
 
-				log_i("Sensor.PowerSource.Capacity :%d v",Sensor.PowerSource.Capacity);
+				log_i("Sensor.PowerSource.Capacity :%f v",Sensor.PowerSource.Capacity);
 		}		
 		
 		else if( !strcmp(argv[1],"6s") ) {
 				 
-				Sensor.PowerSource.Capacity = 24; // 6s->24v的满电压
+				Sensor.PowerSource.Capacity = 4.2*6; // 6s->25.2v的满电压
 				Flash_Update();
 
-				log_i("Sensor.PowerSource.Capacity :%d v",Sensor.PowerSource.Capacity);
+				log_i("Sensor.PowerSource.Capacity :%f v",Sensor.PowerSource.Capacity);
 		}		
 		else {
 				log_e("Error! Input Error!");
