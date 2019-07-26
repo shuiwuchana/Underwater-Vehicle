@@ -24,21 +24,48 @@
 #include "propeller.h"
 #include "PropellerControl.h"
 #include "gyroscope.h"
+#include "EasyThread.h"
+
+/*---------------------- Constant / Macro Definitions -----------------------*/
+
 //FLASHÆğÊ¼µØÖ·   W25Q128 16M µÄÈİÁ¿·ÖÎª 256 ¸ö¿é£¨Block£©
 #define Nor_FLASH_ADDRESS    (0x0000) 	//W25Q128 FLASHµÄ ÆÕÍ¨ÆğÊ¼µØÖ·   ¡¾µÚ¸öÉÈÇø¡¿
 
 #define IMP_FLASH_ADDRESS    (0x1000) 	//W25Q128 FLASHµÄ ÖØÒª²ÎÊıÆğÊ¼µØÖ· ¡¾µÚ¸öÉÈÇø¡¿
 
-
+/*----------------------- Variable Declarations -----------------------------*/
 
 int16 PowerPercent = 0;
+
 PID_Parameter_Flag  PID_Parameter_Read_Flag;
 
 uint32 Normal_Parameter[PARAMEMER_MAX_NUMBER_e]={0};
 
+/*----------------------- Function Implement --------------------------------*/
+
+int flash_thread_init(void)
+{
+    rt_thread_t flash_tid;
+		/*´´½¨¶¯Ì¬Ïß³Ì*/
+    flash_tid = rt_thread_create("flash",//Ïß³ÌÃû³Æ
+                    flash_thread_entry,				 //Ïß³ÌÈë¿Úº¯Êı¡¾entry¡¿
+                    RT_NULL,							   //Ïß³ÌÈë¿Úº¯Êı²ÎÊı¡¾parameter¡¿
+                    1024,										 //Ïß³ÌÕ»´óĞ¡£¬µ¥Î»ÊÇ×Ö½Ú¡¾byte¡¿
+                    15,										 	 //Ïß³ÌÓÅÏÈ¼¶¡¾priority¡¿
+                    10);										 //Ïß³ÌµÄÊ±¼äÆ¬´óĞ¡¡¾tick¡¿= 100ms
+
+    if (flash_tid != RT_NULL){
+
+				rt_thread_startup(flash_tid);
+		}
+		return 0;
+}
+INIT_APP_EXPORT(flash_thread_init);
+
+
 /*******************************************
 * º¯ Êı Ãû£ºNormal_Parameter_Init_With_Flash
-* ¹¦    ÄÜ£º¶ÁÈ¡FlashÆÕÍ¨²ÎÊı¡¾Ò²·Ç³£ÖØÒª¡¿
+* ¹¦    ÄÜ£º¶ÁÈ¡FlashÆÕÍ¨²ÎÊı¡¾·Ç³£ÖØÒª¡¿
 * ÊäÈë²ÎÊı£ºnone
 * ·µ »Ø Öµ£ºnone
 * ×¢    Òâ£ºNORMAL_PARAMETER_TABLE Ã¶¾Ù±í ÖĞÌí¼Ó×ÔÉíĞèÒªµÄµÄ²ÎÊıµÄ Ã¶¾ÙÖµ
@@ -49,19 +76,18 @@ int Normal_Parameter_Init_With_Flash(void)
 {
 		uint8 i = 0;
 		for(i = 0;i < PARAMEMER_MAX_NUMBER_e;i++ ){
-				ef_port_read(Nor_FLASH_ADDRESS+4*i,(Normal_Parameter+i),4);		 //ef_set_env
+				ef_port_read(Nor_FLASH_ADDRESS+4*i,(Normal_Parameter+i),4);		 //Flash¶ÁÈ¡
 		}
 		Normal_Parameter_SelfCheck_With_Flash();//Flash²ÎÊı×Ô¼ì ÈôÎª 0 ÔòÎª ·ÇÕı³£Êı¾İ£¬Ôò²»´«µİ¸øÕæÊµÊı¾İ 
 
 		log_i("Flash_Read()");
-		log_i("                      --------");
-		log_i("VehicleMode           |%s   |",VehicleModeName[VehicleMode]);
-		log_i("Depth Sensor Type     |%s|",Depth_Sensor_Name[Sensor.DepthSensor.Type]); //Éî¶È´«¸ĞÆ÷ÀàĞÍ
-		log_i("debug_tool            |%s   |",debug_tool_name[debug_tool]);
-		log_i("                      --------");
+		log_i("                      ----------");
+		log_i("VehicleMode           |%s|",VehicleModeName[VehicleMode]);
+		log_i("Depth Sensor Type     |%s |",Depth_Sensor_Name[Sensor.DepthSensor.Type]); //Éî¶È´«¸ĞÆ÷ÀàĞÍ
+		log_i("debug_tool            |%s     |",debug_tool_name[debug_tool]);
+		log_i("                      ----------");
 		return 0;
 }
-
 
 
 void Normal_Parameter_SelfCheck_With_Flash(void) //Flash²ÎÊı×Ô¼ì ÈôÎª 0 ÔòÎª ·ÇÕı³£Êı¾İ 
@@ -96,11 +122,9 @@ void Normal_Parameter_SelfCheck_With_Flash(void) //Flash²ÎÊı×Ô¼ì ÈôÎª 0 ÔòÎª ·ÇÕ
 		Parameter_SelfCheck( (uint32 *)&Sensor.DepthSensor.Type,&Normal_Parameter[DEPTH_SENSOR_TYPE_e] );//Éî¶È´«¸ĞÆ÷ MS5837/SPL1301
 		
 		/* ¡¾µç³ØÈİÁ¿ÀàĞÍ¡¿  */
-<<<<<<< HEAD
-		Parameter_SelfCheck( (uint32 *)&Sensor.PowerSource.Capacity,&Normal_Parameter[BATTERY_CAPACITY_e] );//3s/4s/6s
-=======
 		Parameter_SelfCheck( (uint32 *)&Sensor.PowerSource.Capacity,&Normal_Parameter[BATTERY_CAPACITY_e] );//µç³ØÈİÁ¿²ÎÊı 3s/4s/6s
 		
+
 		/* ¡¾ÍÆ½øÆ÷µ÷Õû·½ÏòÏµÊı¡¿*/
 //		Parameter_SelfCheck( (uint32 *)&Direction.UP_P1,  &Normal_Parameter[DIRECTION_UP_P1_e] );		//×ó±êÖ¾Î»Ç°½øÏµÊı
 //		Parameter_SelfCheck( (uint32 *)&Direction.UP_P2,  &Normal_Parameter[DIRECTION_UP_P2_e] );		//ÓÒ±êÖ¾Î»Ç°½øÏµÊı
@@ -109,7 +133,7 @@ void Normal_Parameter_SelfCheck_With_Flash(void) //Flash²ÎÊı×Ô¼ì ÈôÎª 0 ÔòÎª ·ÇÕ
 //		Parameter_SelfCheck( (uint32 *)&Direction.LEFT_P, &Normal_Parameter[DIRECTION_LEFT_P1_e] );		//Ïò×óÏµÊı
 //		Parameter_SelfCheck( (uint32 *)&Direction.RIGHT_P,&Normal_Parameter[DIRECTION_RIGHT_P1_e] );	//ÏòÓÒÏµÊı
 //		
->>>>>>> d7be8108aa196336e709695979ebaca59562c13a
+
 }
 /*
 void test_env(void) {
@@ -162,9 +186,6 @@ void Flash_Update(void)
 		
 		ef_port_write(Nor_FLASH_ADDRESS+4*DEPTH_SENSOR_TYPE_e ,(uint32 *)&Sensor.DepthSensor.Type,4); //Éî¶È´«¸ĞÆ÷ ÀàĞÍ
 		
-<<<<<<< HEAD
-		ef_port_write(Nor_FLASH_ADDRESS+4*BATTERY_CAPACITY_e ,(uint32 *)&Sensor.PowerSource.Capacity,4); //Éî¶È´«¸ĞÆ÷ ÀàĞÍ
-=======
 		ef_port_write(Nor_FLASH_ADDRESS+4*BATTERY_CAPACITY_e ,(uint32 *)&Sensor.PowerSource.Capacity,4); //µç³ØÈİÁ¿²ÎÊı 3s/4s/6s
 		
 		ef_port_write(Nor_FLASH_ADDRESS+4*DIRECTION_UP_P1_e ,   (uint32 *)&Direction.UP_P1,4);		//×ó±êÖ¾Î»Ç°½øÏµÊı
@@ -174,7 +195,7 @@ void Flash_Update(void)
 		ef_port_write(Nor_FLASH_ADDRESS+4*DIRECTION_LEFT_P1_e , (uint32 *)&Direction.LEFT_P,4);		//Ïò×óÏµÊı
 		ef_port_write(Nor_FLASH_ADDRESS+4*DIRECTION_RIGHT_P1_e ,(uint32 *)&Direction.RIGHT_P,4);	//ÏòÓÒÏµÊı
 		
->>>>>>> d7be8108aa196336e709695979ebaca59562c13a
+
 }	
 MSH_CMD_EXPORT(Flash_Update,Flash Update);
 
@@ -213,7 +234,7 @@ void list_value(void)
 		log_i("rightMiddle_Dir           %d",PropellerDir.rightMiddle);
 		log_i("Propeller_Power           %d",PowerPercent);//ÍÆ½øÆ÷¶¯Á¦°Ù·Ö±È
 		log_i("----------------------   ---------");
-		log_i("Battery Capacity          %d",Sensor.PowerSource.Capacity);//µç³ØÈİÁ¿²ÎÊı
+		log_i("Battery Capacity          %f",Sensor.PowerSource.Capacity);//µç³ØÈİÁ¿²ÎÊı
 		
     rt_kprintf("\n");
 }
@@ -221,7 +242,7 @@ MSH_CMD_EXPORT(list_value,list some important values);
 
 
 
-void Save_PID_Parameter(void)
+void Save_PID_Parameter(void)//±£´æPID²ÎÊı
 {
 		uint8 i = 0;
 		
@@ -302,10 +323,11 @@ int PID_Paramter_Init_With_Flash(void)//³õÊ¼»¯¶ÁÈ¡PID²ÎÊı
 INIT_APP_EXPORT(PID_Paramter_Init_With_Flash);
 
 
+
 void Parameter_SelfCheck(uint32 *RealParameter,uint32 *TempParameter)
 {
-		if(*TempParameter <10000 && (int)*TempParameter > -500)	//´Ö²ÚÅĞ¶Ï,¼ì²âflashÖµÎª´óÖÂÕıÈ·Öµ
-		{
+		//int isnan(x)º¯Êı µ±xÊ±nan·µ»Ø1£¬ÆäËü·µ»Ø0
+		if( isnan(*TempParameter) == 0 ) {//Èç¹û²»ÊÇÎŞĞ§Êı×Ö not a number,ÔòÅĞ¶¨ÎªÕıÈ·
 				*RealParameter = *TempParameter; //Flash Êı¾İÕıÈ·ÔòÌæ»»ÎªÕæÊµ±äÁ¿
 		}
 }

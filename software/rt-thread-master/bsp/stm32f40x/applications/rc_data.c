@@ -1,15 +1,22 @@
 /*
- * RC_Data.c
+ * rc_data.c
  *
  *  Created on: 2019年4月5日
  *      Author: zengwangfa
- *      Notes:  遥控器数据解析 Remote Control receiving Data
+ *      Notes:  遥控器数据解析 Remote Control Receiving Data
  */
-#include "RC_Data.h"
+#define LOG_TAG    "rc_data"
+
+#include "rc_data.h"
 #include "led.h"
 #include "PropellerControl.h"
 #include <string.h>
+
+/*---------------------- Constant / Macro Definitions -----------------------*/
+
 #define MAX_DATA_LENS 16  //有效数据包长度【不包含 包头、长度位、校验位】
+
+/*----------------------- Variable Declarations -----------------------------*/
 
 ReceiveData_Type ReceiveData = {
 		.THR = 1500,
@@ -31,6 +38,8 @@ uint8 RC_Control_Data[30] = {0};
 uint8 Receive_Data_OK = 0;
 uint8 Control_RxCheck = 0;	  //尾校验字
 uint8 Control_RxCount = 0;	  //接收计数
+
+/*----------------------- Function Implement --------------------------------*/
 /**
   * @brief  Remote_Control_Data_Analysis(控制数据解析)
   * @param  控制字符数据 uint8 Data
@@ -93,6 +102,7 @@ void Control_Cmd_Get(ControlCmd_Type *cmd) //控制命令获取
 				cmd->Arm						= RC_Control_Data[13]; //机械臂控制
 				cmd->Raspi          = RC_Control_Data[14]; //树莓派启动位
 				cmd->All_Lock       = RC_Control_Data[18];
+			
 				Receive_Data_OK = 0x00;//清零标志位
 
 		}
@@ -107,6 +117,7 @@ void Control_Cmd_Clear(ControlCmd_Type *cmd) //memset(&addr,0,sizeof(addr));
 		//cmd->All_Lock       = 0; 
 		//cmd->Depth_Lock     = 0; //深度锁定
 		//cmd->Direction_Lock = 0; //方向锁定
+		//cmd->Raspi          = 0; //树莓派启动位
 	
 		cmd->Move					  = 0; //前后
 		cmd->Translation	  = 0; //左右平移
@@ -118,7 +129,6 @@ void Control_Cmd_Clear(ControlCmd_Type *cmd) //memset(&addr,0,sizeof(addr));
 		cmd->Focus 				  = 0; //变焦摄像头控制
 		cmd->Yuntai 				= 0; //云台控制
 		cmd->Arm						= 0; //机械臂控制
-		cmd->Raspi          = 0; //树莓派启动位
 
 		//memset(cmd,0,sizeof(*cmd));//内存块内填充0 【不适用】
 }

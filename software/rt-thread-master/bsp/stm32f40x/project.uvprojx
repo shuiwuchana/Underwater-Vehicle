@@ -17,7 +17,7 @@
         <TargetCommonOption>
           <Device>STM32F407ZG</Device>
           <Vendor>STMicroelectronics</Vendor>
-          <PackID>Keil.STM32F4xx_DFP.2.13.0</PackID>
+          <PackID>Keil.STM32F4xx_DFP.1.0.8</PackID>
           <PackURL>http://www.keil.com/pack</PackURL>
           <Cpu>IRAM(0x20000000,0x20000) IRAM2(0x10000000,0x10000) IROM(0x08000000,0x100000) CPUTYPE("Cortex-M4") FPU2 CLOCK(12000000) ELITTLE</Cpu>
           <FlashUtilSpec></FlashUtilSpec>
@@ -185,6 +185,7 @@
             <hadXRAM>0</hadXRAM>
             <uocXRam>0</uocXRam>
             <RvdsVP>2</RvdsVP>
+            <RvdsMve>0</RvdsMve>
             <hadIRAM2>1</hadIRAM2>
             <hadIROM2>0</hadIROM2>
             <StupSel>8</StupSel>
@@ -498,19 +499,14 @@
               <FilePath>User\PropellerControl.c</FilePath>
             </File>
             <File>
-              <FileName>RC_Data.c</FileName>
+              <FileName>EasyThread.c</FileName>
               <FileType>1</FileType>
-              <FilePath>User\RC_Data.c</FilePath>
+              <FilePath>.\User\EasyThread.c</FilePath>
             </File>
             <File>
-              <FileName>Return_Data.c</FileName>
+              <FileName>DeviceThread.c</FileName>
               <FileType>1</FileType>
-              <FilePath>User\Return_Data.c</FilePath>
-            </File>
-            <File>
-              <FileName>Depth.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\User\Depth.c</FilePath>
+              <FilePath>.\User\DeviceThread.c</FilePath>
             </File>
             <File>
               <FileName>notes.c</FileName>
@@ -522,6 +518,16 @@
         <Group>
           <GroupName>Applications</GroupName>
           <Files>
+            <File>
+              <FileName>rc_data.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\applications\rc_data.c</FilePath>
+            </File>
+            <File>
+              <FileName>ret_data.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\applications\ret_data.c</FilePath>
+            </File>
             <File>
               <FileName>PID.c</FileName>
               <FileType>1</FileType>
@@ -548,14 +554,14 @@
               <FilePath>applications\led.c</FilePath>
             </File>
             <File>
-              <FileName>oled.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>applications\oled.c</FilePath>
-            </File>
-            <File>
               <FileName>propeller.c</FileName>
               <FileType>1</FileType>
               <FilePath>applications\propeller.c</FilePath>
+            </File>
+            <File>
+              <FileName>oled.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>applications\oled.c</FilePath>
             </File>
             <File>
               <FileName>servo.c</FileName>
@@ -586,6 +592,11 @@
               <FileName>timer.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\applications\timer.c</FilePath>
+            </File>
+            <File>
+              <FileName>light.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\applications\light.c</FilePath>
             </File>
           </Files>
         </Group>

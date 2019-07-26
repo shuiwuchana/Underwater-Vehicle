@@ -19,31 +19,60 @@
 #include "servo.h"
 #include "propeller.h"
 #include "flash.h"
-#include "Return_Data.h"
-#include "RC_Data.h"
+#include "ret_data.h"
+#include "rc_data.h"
 #include "focus.h"
+#include "DeviceThread.h"
+
+/*---------------------- Constant / Macro Definitions -----------------------*/
 
 #define RoboticArm_MedValue  1500
 #define YunTai_MedValue  		 2000
 
+/*----------------------- Variable Declarations -----------------------------*/
 
 ServoType RoboticArm = {
 		 .MaxValue = 2000, 		//机械臂 正向最大值
-		 .MinValue = 1500,	  //机械臂 反向
-		 .MedValue = 1900,
+		 .MinValue = 1000,	  //机械臂 反向
+		 .MedValue = 1500,
 	   .Speed  = 5//机械臂当前值
 };  //机械臂
 ServoType  YunTai = {
-		 .MaxValue = 1700, 		//机械臂 正向最大值
-		 .MinValue = 1000,	  //机械臂 反向
-		 .MedValue = 1300,
+		 .MaxValue = 2500, 		//机械臂 正向最大值
+		 .MinValue = 1500,	  //机械臂 反向
+		 .MedValue = 2000,
 	   .Speed  = 10//云台转动速度
 };      //云台
 
 uint16 propeller_power = 1500;
-
+short _test_value = 0;
 extern float Adjust1,Adjust2 ;
-extern struct rt_event init_event;/* ALL_init 事件控制块. */
+
+/*----------------------- Function Implement --------------------------------*/
+int servo_thread_init(void)
+{
+    rt_thread_t servo_tid;
+		/*创建动态线程*/
+    servo_tid = rt_thread_create("servo",//线程名称
+                    servo_thread_entry,			 //线程入口函数【entry】
+                    RT_NULL,							   //线程入口函数参数【parameter】
+                    1024,										 //线程栈大小，单位是字节【byte】
+                    15,										 	 //线程优先级【priority】
+                    10);										 //线程的时间片大小【tick】= 100ms
+
+    if (servo_tid != RT_NULL){
+
+				TIM4_PWM_Init(20000-1,84-1);	//84M/84=1Mhz的计数频率,重装载值(即PWM精度)20000，所以PWM频率为 1M/20000=50Hz.  
+
+				log_i("Servo_init()");
+				rt_thread_startup(servo_tid);
+				//rt_event_send(&init_event, PWM_EVENT); //发送事件  表示初始化完成
+		}
+
+		return 0;
+}
+INIT_APP_EXPORT(servo_thread_init);
+
 /*******************************************
 * 函 数 名：Servo_Output_Limit
 * 功    能：舵机输出限制
@@ -53,8 +82,8 @@ extern struct rt_event init_event;/* ALL_init 事件控制块. */
 ********************************************/
 void Servo_Output_Limit(ServoType *Servo)
 {
-		Servo->CurrentValue = Servo->CurrentValue  > Servo->MaxValue ? Servo->MaxValue : Servo->CurrentValue ;//正向限幅
-		Servo->CurrentValue = Servo->CurrentValue  < Servo->MinValue ? Servo->MinValue : Servo->CurrentValue ;//反向限幅
+		Servo->CurrentValue = Servo->CurrentValue > Servo->MaxValue ? Servo->MaxValue : Servo->CurrentValue ;//正向限幅
+		Servo->CurrentValue = Servo->CurrentValue < Servo->MinValue ? Servo->MinValue : Servo->CurrentValue ;//反向限幅
 	
 }
 
@@ -82,7 +111,7 @@ void RoboticArm_Control(uint8 *action)
 				default:break;
 		}
 		Servo_Output_Limit(&RoboticArm);//机械臂舵机限幅
-		TIM_SetCompare3(TIM4,RoboticArm.CurrentValue);
+		TIM4_PWM_CH3_D14(RoboticArm.CurrentValue);
 		*action = 0x00; //清除控制字
 }
 
@@ -94,118 +123,126 @@ void RoboticArm_Control(uint8 *action)
   * @notice 
   */
 
-void YunTai_Control(uint8 *action)
-{		
-		static int DirectionMode = 1;
-		
-		switch(*action)
-		{
-				case 0x01:DirectionMode++;
-						  DirectionMode = DirectionMode<=DirectionMode_MAX?DirectionMode:1;	
-						  Buzzer_Set(&Beep,1,1);			
-						break;  
-						
-				case 0x02:DirectionProportion(DirectionMode);
-						break;  
-
-				case 0x03:DirectionMode = 0;break;   //归中
-				default: break;
-		}
-		Servo_Output_Limit(&YunTai);
-		TIM_SetCompare4(TIM4,YunTai.CurrentValue); 
-		*action = 0x00; //清除控制字
-}
-
-void DirectionProportion(int Mode)
-{
-	switch(Mode)
-	{
-		case DirectionUp   :Direction.UP_P1 = Adjust1;
-							Direction.UP_P2 = Adjust2;	
-							break;
-		case DirectionDown :Direction.DOWN_P1 = Adjust1;
-						    Direction.DOWN_P2 = Adjust2;
-							break;
-		case DirectionLeft :Direction.LEFT_P = Adjust1;
-		case DirectionRight:Direction.RIGHT_P = Adjust1;
-		default: break;
-	}
-}
-
 //void YunTai_Control(uint8 *action)
-//{
+//{		
+//		static int DirectionMode = 1;
+//		
 //		switch(*action)
 //		{
-//				case 0x01:YunTai.CurrentValue += YunTai.Speed;  //向上
-//						if(YunTai.CurrentValue <= YunTai.MaxValue){device_hint_flag |= 0x02;}//云台到头标志
-//						else {device_hint_flag &= 0xFD;}; //清除云台到头标志
-
+//				case 0x01:DirectionMode++;
+//						  DirectionMode = DirectionMode<=DirectionMode_MAX?DirectionMode:1;	
+//						  Buzzer_Set(&Beep,1,1);			
 //						break;  
 //						
-//				case 0x02:YunTai.CurrentValue -= YunTai.Speed; //向下
-//						if(YunTai.CurrentValue >= YunTai.MinValue){device_hint_flag |= 0x02;}//云台到头标志
-//						else {device_hint_flag &= 0xFD;}; //清除云台到头标志
-
+//				case 0x02:DirectionProportion(DirectionMode);
 //						break;  
 
-//				case 0x03:YunTai.CurrentValue = YunTai.MedValue;break;   //归中
+//				case 0x03:DirectionMode = 0;break;   //归中
 //				default: break;
 //		}
 //		Servo_Output_Limit(&YunTai);
-//		TIM_SetCompare4(TIM4,YunTai.CurrentValue); 
+//		TIM4_PWM_CH4_D15(YunTai.CurrentValue); 
 //		*action = 0x00; //清除控制字
 //}
 
+//void DirectionProportion(int Mode)
+//{
+//	switch(Mode)
+//	{
+//		case DirectionUp   :Direction.UP_P1 = Adjust1;
+//							Direction.UP_P2 = Adjust2;	
+//							break;
+//		case DirectionDown :Direction.DOWN_P1 = Adjust1;
+//						    Direction.DOWN_P2 = Adjust2;
+//							break;
+//		case DirectionLeft :Direction.LEFT_P = Adjust1;
+//		case DirectionRight:Direction.RIGHT_P = Adjust1;
+//		default: break;
+//	}
+//}
 
-
-/**
-  * @brief  servo_thread_entry(舵机初始化任务函数)
-  * @param  void* parameter
-  * @retval None
-  * @notice 
-  */
-void servo_thread_entry(void *parameter)//高电平1.5ms 总周期20ms  占空比7.5% volatil
+void YunTai_Control(uint8 *action)
 {
-		TIM1_PWM_Init(20000-1,168-1);	//168M/168=1Mhz的计数频率,重装载值(即PWM精度)20000，所以PWM频率为 1M/20000=50Hz.  【现在为500Hz】
-		TIM4_PWM_Init(20000-1,84-1);	//84M/84=1Mhz的计数频率,重装载值(即PWM精度)20000，所以PWM频率为 1M/20000=50Hz.  
-		TIM_Cmd(TIM1, ENABLE);  //使能TIM1
-		TIM_Cmd(TIM4, ENABLE);  //使能TIM4
-	
-		Propeller_Init();       //推进器初始化
-	
-		rt_thread_mdelay(100);
-	
-}
+		switch(*action)
+		{
+				case 0x01:YunTai.CurrentValue += YunTai.Speed;  //向上
+						if(YunTai.CurrentValue <= YunTai.MaxValue){device_hint_flag |= 0x02;}//云台到头标志
+						else {device_hint_flag &= 0xFD;}; //清除云台到头标志
 
+						break;  
+						
+				case 0x02:YunTai.CurrentValue -= YunTai.Speed; //向下
+						if(YunTai.CurrentValue >= YunTai.MinValue){device_hint_flag |= 0x02;}//云台到头标志
+						else {device_hint_flag &= 0xFD;}; //清除云台到头标志
 
-int servo_thread_init(void)
-{
-    rt_thread_t servo_tid;
-		/*创建动态线程*/
-    servo_tid = rt_thread_create("servo",//线程名称
-                    servo_thread_entry,			 //线程入口函数【entry】
-                    RT_NULL,							   //线程入口函数参数【parameter】
-                    1024,										 //线程栈大小，单位是字节【byte】
-                    15,										 	 //线程优先级【priority】
-                    10);										 //线程的时间片大小【tick】= 100ms
+						break;  
 
-    if (servo_tid != RT_NULL){
-
-				log_i("Servo_init()");
-			
-				rt_thread_startup(servo_tid);
-				//rt_event_send(&init_event, PWM_EVENT); //发送事件  表示初始化完成
+				case 0x03:YunTai.CurrentValue = YunTai.MedValue;break;   //归中
+				default: break;
 		}
-
-		return 0;
+		Servo_Output_Limit(&YunTai);
+		TIM4_PWM_CH4_D15(YunTai.CurrentValue); 
+		*action = 0x00; //清除控制字
 }
-INIT_APP_EXPORT(servo_thread_init);
 
 
 
 
 
 
+
+
+/*【吸取器】 修改 【测试】 MSH方法 */
+static int xiquqi_value_set(int argc, char **argv)
+{
+    int result = 0;
+    if (argc != 2){
+        log_e("Error! Proper Usage: robotic_arm_currentValue_set <0~3000>");
+				result = -RT_ERROR;
+        goto _exit;
+    }
+
+		if(atoi(argv[1]) <= 3000 ){		
+				_test_value = atoi(argv[1]);
+				log_i(" Value:  %d",_test_value);
+				TIM3_PWM_CH3_B0(_test_value);
+		}
+		else {
+				log_e("Error! The value is out of range!");
+		}
+_exit:
+    return result;
+}
+MSH_CMD_EXPORT(xiquqi_value_set,ag: xiquqi_value_set <0~3000>);
+
+
+
+
+
+/*【云台】舵机 修改 【当前】 MSH方法 */
+static int robotic_arm_currentValue_set(int argc, char **argv)
+{
+    int result = 0;
+    if (argc != 2){
+        log_e("Error! Proper Usage: robotic_arm_currentValue_set <0~3000>");
+				result = -RT_ERROR;
+        goto _exit;
+    }
+
+		if(atoi(argv[1]) <= 3000 ){		
+				RoboticArm.CurrentValue = atoi(argv[1]);
+				log_i(" Value:  %d",RoboticArm.CurrentValue);
+				TIM_SetCompare3(TIM4,RoboticArm.CurrentValue);
+
+
+		}
+		else {
+				log_e("Error! The value is out of range!");
+		}
+_exit:
+    return result;
+}
+MSH_CMD_EXPORT(robotic_arm_currentValue_set,ag: robotic_arm_currentValue_set <0~3000>);
 
 
 

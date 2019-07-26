@@ -15,7 +15,7 @@
 #include "sys.h"
 
 #include "led.h"
-#include "RC_Data.h"
+#include "rc_data.h"
 #include "drv_cpu_temp.h"
 #include "drv_cpuusage.h"
 #include "drv_oled.h"
@@ -27,6 +27,8 @@
 #include "gyroscope.h"
 #include "sensor.h"
 #include "filter.h"
+
+#include "EasyThread.h"
 /* 自定义OLED 坐标系如下: 
 
 	127 ↑y
@@ -46,7 +48,7 @@ static uint32 total_mem,used_mem,max_used_mem;
 
 /*--------------------------- Variable Declarations --------------------------------*/
 
-char *VehicleModeName[2] = {"ROV","AUV"}; //定义用于显示的 模式字符 0->AUV  1->ROV
+char *VehicleModeName[2] = {"4_AXIS","6_AXIS"}; //定义用于显示的 模式字符 0->AUV  1->ROV
 volatile MENU_LIST_Enum MENU = StatusPage;//OLED初始页面为 状态页. volatile是一种类型修饰符。
 																				  //volatile 的作用 是作为指令关键字，确保本条指令不会因编译器的优化而省略，且要求每次直接在其内存中读值。
 
@@ -67,6 +69,29 @@ Oled_Type oled = {
 												"PicturePage"} 							
 };
 /*----------------------- Function Implement --------------------------------*/
+
+/* OLED 线程初始化 */
+int oled_thread_init(void)
+{
+    rt_thread_t oled_tid;
+		/*创建动态线程*/
+    oled_tid = rt_thread_create("oled", //线程名称
+                    oled_thread_entry,	//线程入口函数【entry】
+                    RT_NULL,				    //线程入口函数参数【parameter】
+                    2048,							  //线程栈大小，单位是字节【byte】
+                    15,								  //线程优先级【priority】
+                    10);							  //线程的时间片大小【tick】= 100ms
+
+    if (oled_tid != RT_NULL){
+				OLED_Init();
+				log_i("OLED_Init()");
+				rt_thread_startup(oled_tid);
+				//rt_event_send(&init_event, OLED_EVENT);
+				oled.pagechange = oled.pagenum;  //初始化暂存页面
+		}
+		return 0;
+}
+INIT_APP_EXPORT(oled_thread_init);
 
 /*******************************************
 * 函 数 名：menu_define
@@ -106,22 +131,6 @@ void menu_define(void) //菜单定义
 	}
 }
 
-/*******************************************
-* 函 数 名：oled_thread_entry
-* 功    能：OLED线程任务
-* 输入参数：none
-* 返 回 值：none
-* 注    意：菜单号越大 刷新速率越大
-********************************************/
-void oled_thread_entry(void* parameter)
-{
-		Boot_Animation();	//开机动画
-		OLED_Clear();
-		while(1){	
-				menu_define();//菜单定义选择
-				rt_thread_mdelay(1000/pow(MENU+2,3)); //菜单号越大 刷新速率越大
-		}
-}
 
 /*******************************************
 * 函 数 名：OLED_StatusPage
@@ -145,16 +154,19 @@ void OLED_StatusPage(void)
 		sprintf(str,"Mode:[%s-NO.%d]",VehicleModeName[VehicleMode],get_boma_value()); //获取本机为ROV or AUV
 		OLED_ShowString(0,0, (uint8 *)str,12); 
 	
-		sprintf(str,"Vol:%.2fV  \r\n",Sensor.PowerSource.Voltage);//电压
+		sprintf(str,"Vol:%.2fV",Sensor.PowerSource.Voltage);//电压
 		OLED_ShowString(0,16,(uint8 *)str,12); 
 		
-		sprintf(str,"Cur:%.2f A  \r\n",Sensor.PowerSource.Current);//电流
+		sprintf(str,"Cur:%.2fA",Sensor.PowerSource.Current);//电流
 		OLED_ShowString(70,16,(uint8 *)str,12); 	
 		
-	  sprintf(str,"CPU Usage:%.2f %% ",Sensor.CPU.Usage);//%字符的转义字符是%%  %这个字符在输出语句是向后匹配的原则
+	  sprintf(str,"CPU:%.2f%% ",Sensor.CPU.Usage);//%字符的转义字符是%%  %这个字符在输出语句是向后匹配的原则
 		OLED_ShowString(0,32,(uint8 *)str,12); 
 		
-		sprintf(str,"Temperature:%.2f C \r\n",Sensor.CPU.Temperature);//显示的温度
+		sprintf(str,"Temp:%.1fC ",Sensor.CPU.Temperature);//显示的温度
+		OLED_ShowString(70,32,(uint8 *)str,12);
+		
+		sprintf(str,"Depth:%.2f cm      ",Sensor.DepthSensor.Depth);//显示的温度
 		OLED_ShowString(0,48,(uint8 *)str,12);
 		OLED_Refresh_Gram();//更新显示到OLED
 }
@@ -194,85 +206,48 @@ void OLED_GyroscopePage(void)
 void OLED_LockPage(void)
 {		
 
-		static char str[50] = {0};
-		int16 oled_voltage = 0,VoltageNumber = 0;
+		static char str[30] = {0};   //暂存OLED字符串
+		static uint8 vol_box = 0; 	 //电压框 格子数
+		static uint8 vol_percent = 0;//电压百分比
 		
 		if(Sensor.PowerSource.Capacity != 0){ //判定非0
-				oled_voltage = (Sensor.PowerSource.Voltage-(Sensor.PowerSource.Capacity*STANDARD_VOLTAGE/FULL_VOLTAGE))*12
-			    /(Sensor.PowerSource.Capacity/(2*FULL_VOLTAGE)); //oled电量显示 = 真实电压值*12格/最大电池容量的电压
+				vol_box = (Sensor.PowerSource.Voltage-(Sensor.PowerSource.Capacity*STANDARD_VOLTAGE/FULL_VOLTAGE))*12/
+								  (Sensor.PowerSource.Capacity/(2*FULL_VOLTAGE)); //oled电量显示 = 真实电压值*12格/最大电池容量的电压
+			
+				vol_percent = (Sensor.PowerSource.Voltage-(Sensor.PowerSource.Capacity*STANDARD_VOLTAGE/FULL_VOLTAGE))/
+					            (Sensor.PowerSource.Capacity/(2*FULL_VOLTAGE))*100;  //电量百分比 = （真实电压值-安全电压值）*100%
+			
+				vol_box = vol_box > 12 ? 12 : vol_box; 						  //电压格子数 限幅
+				vol_box = vol_box <= 0  ? 0  : vol_box;
+				vol_percent = vol_percent > 100 ? 100 : vol_percent;//电压百分比限幅
+				vol_percent = vol_percent <= 0   ? 0   : vol_percent;
+			
+				Sensor.PowerSource.Percent = vol_percent;
 		}		
-		else{ //如果未设定，提示设定电池容量参数
+		else{ //如果未设定,则不计算 <电压框格子数> 和 <电量百分比> ,并提示设定电池容量参数 
 				log_w("not yet set_battery_capacity parameter!");
-				rt_thread_mdelay(5000);//5s
+				Buzzer_Set(&Beep,1,1);	
+				rt_thread_mdelay(5000); //5s
 		}
 		
-<<<<<<< HEAD
-		if(is_raspi_start()){ //树莓派是否启动服务器程序
-=======
-		if(oled_voltage < 0)					//	如果电量小于零，则报警和RGB快
-		{
-			Bling_Set(&Light_1,300,50,0.5,0,77,0);
-			Buzzer_Set(&Beep,1,1);	
-		}
-		
-		if(oled_voltage>12)
-		{
-			oled_voltage = 12;
-		}
-		else if(oled_voltage < 0)
-		{
-			oled_voltage = 0;
-		}
-
-		if(is_raspi_start()){
->>>>>>> d7be8108aa196336e709695979ebaca59562c13a
+		if(is_raspi_start()){//树莓派是否启动服务器程序
 				Buzzer_Set(&Beep,3,1);
 				OLED_ShowPicture(0,28,raspberry_logo,28,33);//显示树莓派LOGO
 		}
-		VoltageNumber = (Sensor.PowerSource.Voltage-(Sensor.PowerSource.Capacity*STANDARD_VOLTAGE/FULL_VOLTAGE))
-						/(Sensor.PowerSource.Capacity/(2*FULL_VOLTAGE))*100;  //电量百分比 = （真实电压值-安全电压值）*100%
-		if(VoltageNumber>100)
-		{
-			VoltageNumber = 100;
-		}
-		else if(VoltageNumber < 0)
-		{
-			VoltageNumber = 0;
-		}
-		
-		sprintf(str,"%d%%",VoltageNumber);//当前电量百分比
-		OLED_ShowString(85,0, (uint8 *)str,12);
-<<<<<<< HEAD
 
-		sprintf(str,"Vol:%.2f V  \r\n",Sensor.PowerSource.Voltage);//电压
-		OLED_ShowString(0,0,(uint8 *)str,12); 
+		sprintf(str,"Vol:%.2fV  \r\n",Sensor.PowerSource.Voltage);//电压
+		OLED_ShowString(0,0, (uint8 *)str,12);
 		
 		sprintf(str,"Cur:%.2f A  \r\n",Sensor.PowerSource.Current);//电流
 		OLED_ShowString(0,12,(uint8 *)str,12); 	
 		
-=======
-		sprintf(str,"Vol:%.2fV  \r\n",Sensor.PowerSource.Voltage);//电压
-		OLED_ShowString(0,0, (uint8 *)str,12);
-		
+		sprintf(str,"%d%% ",vol_percent);//当前电量百分比 %
+		OLED_ShowString(80,0, (uint8 *)str,12);
 
->>>>>>> d7be8108aa196336e709695979ebaca59562c13a
-		OLED_ShowPicture(107,0,bmp_battery[oled_voltage],10,16);//显示电量
+		OLED_ShowPicture(107,0,bmp_battery[vol_box],10,16);//显示电量
 		OLED_ShowPicture(49,43-15,bmp_lock[ControlCmd.All_Lock-1],30,30);//锁屏
 		
 		OLED_Refresh_Gram();//更新显示到OLED
-		
-<<<<<<< HEAD
-
-=======
-		if(UNLOCK == ControlCmd.All_Lock){	//如果解锁则跳转至状态页面
-				rt_thread_mdelay(1000); //延时1s
-				oled.pagenum = StatusPage;
-		}
-		
-		
->>>>>>> d7be8108aa196336e709695979ebaca59562c13a
-				
-
 }
 
 /*******************************************
@@ -472,28 +447,6 @@ void draw_line(uint8 x0,uint8 y0,float k,uint8 dot) //过固定点(x0,y0),斜率k   do
 		}
 
 }
-/* OLED 线程初始化 */
-int oled_thread_init(void)
-{
-    rt_thread_t oled_tid;
-		/*创建动态线程*/
-    oled_tid = rt_thread_create("oled", //线程名称
-                    oled_thread_entry,	//线程入口函数【entry】
-                    RT_NULL,				    //线程入口函数参数【parameter】
-                    2048,							  //线程栈大小，单位是字节【byte】
-                    20,								  //线程优先级【priority】
-                    10);							  //线程的时间片大小【tick】= 100ms
-
-    if (oled_tid != RT_NULL){
-				OLED_Init();
-				log_i("OLED_Init()");
-				rt_thread_startup(oled_tid);
-				//rt_event_send(&init_event, OLED_EVENT);
-				oled.pagechange = oled.pagenum;  //初始化暂存页面
-		}
-		return 0;
-}
-INIT_APP_EXPORT(oled_thread_init);
 
 
 

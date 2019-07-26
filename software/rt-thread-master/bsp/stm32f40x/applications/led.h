@@ -5,7 +5,7 @@
 /*---------------------- Constant / Macro Definitions -----------------------*/
 //RGB灯引脚号
 #define LED_Red 		77 // PD8
-#define LED_Green 	    78 // PD9
+#define LED_Green   78 // PD9
 #define LED_Blue 		79 // PD10
 
 //OV Camera 闪光灯
@@ -38,8 +38,8 @@ typedef struct
 
 
 
-void led_blink_task(void);
-void system_led_blink(uint8 InputData);
+void led_voltage_task(void);
+void system_init_led_blink(void);
 
 void Bling_Set(Bling_Light *Light,
                uint32 Continue_time,//持续时间
@@ -54,10 +54,11 @@ void Bling_Set(Bling_Light *Light,
 void Bling_Process(Bling_Light *Light);
 void Bling_Working(uint8 bling_mode);
 							 
-void ErrorStatus_LED(void);					 
+void ErrorStatus_LED(void);
+void ALL_LED_OFF(void);							 
 void Light_Control(uint8 *action);							 
 
-extern Bling_Light Light_1,Light_2,Light_3,Light_4;
+extern Bling_Light Light_Red,Light_Green,Light_Blue;
 extern uint8 Bling_Mode;
 						 
 							 
