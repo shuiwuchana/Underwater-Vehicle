@@ -20,6 +20,8 @@
 #include "PID.h"
 #include "oled.h"
 #include "propeller.h"
+#include <stdlib.h>
+#include "rc_data.h"
 /*---------------------- Constant / Macro Definitions -----------------------*/		
 
 
@@ -29,8 +31,9 @@
 extern rt_device_t debug_uart_device;	
 extern uint8 uart_startup_flag;
 extern float  Yaw;
-
-
+extern short left_speed  ;
+extern short right_speed ;
+extern float temp_current;
 
 enum 
 {
@@ -44,6 +47,67 @@ enum
 char *debug_tool_name[3]={"NULL","VCAN","ANO"};
 
 uint8 debug_tool = PC_ANO; //山外 / 匿名上位机 调试标志位
+
+
+
+void AdjustPropeller(int DebugMode,Adjust_Parameter *Adjust_Parameter)
+{
+	switch(DebugMode)
+	{
+		case 1: 
+					Forward.leftUp    = Adjust_Parameter->Adjust1;
+			    Forward.leftDown  = Adjust_Parameter->Adjust2;
+			    Forward.rightUp   = Adjust_Parameter->Adjust3;
+			    Forward.rightDown = Adjust_Parameter->Adjust4;
+					break;
+		case 2: Retreat.leftUp    = Adjust_Parameter->Adjust1;
+			    Retreat.leftDown  = Adjust_Parameter->Adjust2;
+			    Retreat.rightUp   = Adjust_Parameter->Adjust3;
+			    Retreat.rightDown = Adjust_Parameter->Adjust4;
+					break;
+		case 3: 
+					TurnRight.leftUp    = Adjust_Parameter->Adjust1;
+			    TurnRight.leftDown  = Adjust_Parameter->Adjust2;
+			    TurnRight.rightUp   = Adjust_Parameter->Adjust3;
+			    TurnRight.rightDown = Adjust_Parameter->Adjust4;
+					break;
+		case 4: 
+					TurnLeft.leftUp  = Adjust_Parameter->Adjust1;
+			    TurnLeft.leftDown  = Adjust_Parameter->Adjust2;
+			    TurnLeft.rightUp   = Adjust_Parameter->Adjust3;
+			    TurnLeft.rightDown = Adjust_Parameter->Adjust4;
+					break;
+		
+		default:break;
+	}
+}
+
+int Adjust1=0,Adjust2=0,Adjust3=0,Adjust4 =0 ;
+void Debug_Mode(int button)
+{
+	static int DebugMode=0;
+
+	switch(button)
+	{
+		case 1:Adjust1++;break;			//  手柄Y键
+		case 2:Adjust1--;break;			//  手柄A键
+		case 3:Adjust2++;break;			//  手柄X键
+		case 4:Adjust2--;break;			//  手柄B键
+		case 5:Adjust3++;break;
+		case 6:Adjust3--;break;
+		case 7:Adjust4++;break;
+		case 8:Adjust4--;break;
+		case 9:AdjustPropeller(DebugMode,&AdjustParameter);break;	//保存推进器参数
+
+		
+		case 11:DebugMode++;DebugMode = DebugMode%5;
+						memset(&AdjustParameter,0,sizeof(AdjustParameter));break;						//模式切换
+		case 12:DebugMode = DebugMode>0?DebugMode:0;break;
+	
+	}
+		
+	
+}
 
 
 /*-----------------------Debug Thread Begin-----------------------------*/
@@ -89,6 +153,11 @@ INIT_APP_EXPORT(Debug_thread_init);
 /*-----------------------Debug Thread End-----------------------------*/
 
 
+extern short last_left_speed  ;
+extern short last_right_speed ;
+extern short left_speed  ;
+extern short right_speed ;
+extern uint16 diff_value ;
 
 #define CMD_WARE    3
 /* VCAN山外上位机调试 BEGIN */
@@ -109,15 +178,15 @@ void Vcan_Send_Data(void)
 
 		static short list[8]= {0};
 
-		list[0] = (short)Sensor.PowerSource.Voltage;  //俯仰角 Pitch
-		list[1] = (short)Sensor.PowerSource.Current; 	  //偏航角 Yaw
+		list[0] = (short)(temp_current*1000);  //俯仰角 Pitch
+		list[1] = (short)(Sensor.PowerSource.Current*1000); 	  //偏航角 Yaw
 
-		list[2] = (short)PropellerPower.leftUp;    //CPU温度 temp
-		list[3] = (short)PropellerPower.leftDown;//
-		list[4] = (short)PropellerPower.rightUp;//MS_TEMP;//get_vol();
+		list[2] = (short)last_left_speed;    //CPU温度 temp
+		list[3] = (short)left_speed;//
+		list[4] = (short)PropellerPower.leftDown;//MS_TEMP;//get_vol();
 		list[5] = (short)PropellerPower.rightDown;//MS5837_Pressure;	
-		list[6] = (short)PropellerPower.leftMiddle;	//camera_center;
-		list[7] = (short)PropellerPower.rightMiddle;
+		list[6] = (short)last_right_speed;	//camera_center;
+		list[7] = (short)right_speed;
 		
 		Vcan_Send_Cmd(list,sizeof(list));
 }
@@ -190,15 +259,6 @@ MSH_CMD_EXPORT(set_debug_tool,set_dubug_tool <vcan|ano|null>);
 
 
 
-void get_memory_situation(void)
-{
-		 static rt_uint32_t total_mem, used_mem, max_used_mem;
-	   rt_memory_info(&total_mem, &used_mem, &max_used_mem);
-     rt_kprintf("Total_Mem:%ld  Used_Mem:%ld  Max_Used_Mem:%ld\n",total_mem,used_mem,max_used_mem);
-}
-MSH_CMD_EXPORT(get_memory_situation,get memory situation);
-
-
 /*  设置机器工作模式 (几轴：几自由度) */
 static int set_vehicle_axis(int argc,char **argv)
 {
@@ -226,5 +286,35 @@ static int set_vehicle_axis(int argc,char **argv)
     return result;
 }
 MSH_CMD_EXPORT(set_vehicle_axis,set_vehicle_mode <4/6>);
+
+
+
+/*  设置机器工作模式 (几轴：几自由度) */
+static int set_work_mode(int argc,char **argv)
+{
+		int result = 0;
+    if (argc != 2){
+				log_e("Proper Usage: set_work_mode <work/debug>");//用法:设置工作模式
+				result = -RT_ERROR;
+        return result;
+    }
+		
+		if( !strcmp(argv[1],"work") ){ //设置为 ROV
+				WorkMode = WORK;
+				Flash_Update();
+				log_i("Current Mode: Work\r");
+		}
+		else if( !strcmp(argv[1],"debug") ){ //设置为工作模式 strcmp 检验两边相等 返回0
+				WorkMode = DEBUG;
+				Flash_Update();
+				log_i("Current Mode: Debug\r");
+		}
+		else {
+				log_e("Proper Usage: set_work_mode <work/debug>");
+		}
+
+    return result;
+}
+MSH_CMD_EXPORT(set_work_mode,set_work_mode <work/debug>);
 
 

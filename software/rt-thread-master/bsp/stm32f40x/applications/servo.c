@@ -46,7 +46,7 @@ ServoType  YunTai = {
 
 uint16 propeller_power = 1500;
 short _test_value = 0;
-extern float Adjust1,Adjust2 ;
+
 
 /*----------------------- Function Implement --------------------------------*/
 
@@ -94,50 +94,14 @@ void RoboticArm_Control(uint8 *action)
 }
 
 
+
+
 /**
   * @brief  YunTai_Control(云台控制)
   * @param  控制指令 0x00：不动作  0x01：向上  0x02：向下
   * @retval None
   * @notice 
   */
-
-//void YunTai_Control(uint8 *action)
-//{		
-//		static int DirectionMode = 1;
-//		
-//		switch(*action)
-//		{
-//				case 0x01:DirectionMode++;
-//						  DirectionMode = DirectionMode<=DirectionMode_MAX?DirectionMode:1;	
-//						  Buzzer_Set(&Beep,1,1);			
-//						break;  
-//						
-//				case 0x02:DirectionProportion(DirectionMode);
-//						break;  
-
-//				case 0x03:DirectionMode = 0;break;   //归中
-//				default: break;
-//		}
-//		Servo_Output_Limit(&YunTai);
-//		TIM4_PWM_CH4_D15(YunTai.CurrentValue); 
-//		*action = 0x00; //清除控制字
-//}
-
-//void DirectionProportion(int Mode)
-//{
-//	switch(Mode)
-//	{
-//		case DirectionUp   :Direction.UP_P1 = Adjust1;
-//							Direction.UP_P2 = Adjust2;	
-//							break;
-//		case DirectionDown :Direction.DOWN_P1 = Adjust1;
-//						    Direction.DOWN_P2 = Adjust2;
-//							break;
-//		case DirectionLeft :Direction.LEFT_P = Adjust1;
-//		case DirectionRight:Direction.RIGHT_P = Adjust1;
-//		default: break;
-//	}
-//}
 
 void YunTai_Control(uint8 *action)
 {
@@ -210,7 +174,7 @@ static int robotic_arm_currentValue_set(int argc, char **argv)
 		if(atoi(argv[1]) <= 3000 ){		
 				RoboticArm.CurrentValue = atoi(argv[1]);
 				log_i(" Value:  %d",RoboticArm.CurrentValue);
-				TIM_SetCompare3(TIM4,RoboticArm.CurrentValue);
+				TIM4_PWM_CH3_D14(RoboticArm.CurrentValue);
 
 
 		}
@@ -445,8 +409,5 @@ _exit:
     return result;
 }
 MSH_CMD_EXPORT(yuntai,ag: yuntai_currentValue_set 1500);
-
-
-
 
 

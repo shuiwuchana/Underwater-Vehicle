@@ -36,6 +36,7 @@
 /*----------------------- Variable Declarations -----------------------------*/
 
 int16 PowerPercent = 0;
+int Extractor_Value = 0;
 
 PID_Parameter_Flag  PID_Parameter_Read_Flag;
 
@@ -82,8 +83,9 @@ int Normal_Parameter_Init_With_Flash(void)
 
 		log_i("Flash_Read()");
 		log_i("                      ----------");
-		log_i("VehicleMode           |%s|",VehicleModeName[VehicleMode]);
-		log_i("Depth Sensor Type     |%s |",Depth_Sensor_Name[Sensor.DepthSensor.Type]); //Éî¶È´«¸ÐÆ÷ÀàÐÍ
+		log_i("VehicleMode           |%s  |",VehicleModeName[VehicleMode]);
+		log_i("WorkMode              |%s    |",WorkModeName[WorkMode]);
+		log_i("Depth Sensor Type     |%s  |",Depth_Sensor_Name[Sensor.DepthSensor.Type]); //Éî¶È´«¸ÐÆ÷ÀàÐÍ
 		log_i("debug_tool            |%s     |",debug_tool_name[debug_tool]);
 		log_i("                      ----------");
 		return 0;
@@ -124,16 +126,19 @@ void Normal_Parameter_SelfCheck_With_Flash(void) //Flash²ÎÊý×Ô¼ì ÈôÎª 0 ÔòÎª ·ÇÕ
 		/* ¡¾µç³ØÈÝÁ¿ÀàÐÍ¡¿  */
 		Parameter_SelfCheck( (uint32 *)&Sensor.PowerSource.Capacity,&Normal_Parameter[BATTERY_CAPACITY_e] );//µç³ØÈÝÁ¿²ÎÊý 3s/4s/6s
 		
+		/* ¡¾ÎüÈ¡Æ÷ÎüÁ¦¡¿  */
+		Parameter_SelfCheck( (uint32 *)&Extractor_Value,&Normal_Parameter[EXTRACTOR_VALUE_e] );//ÎüÈ¡Æ÷ÎüÁ¦
+		
+		/* ¡¾ÎüÈ¡Æ÷ÎüÁ¦¡¿  */
+		Parameter_SelfCheck( (uint32 *)&WorkMode,&Normal_Parameter[WORK_MODE_e] );//
 
-		/* ¡¾ÍÆ½øÆ÷µ÷Õû·½ÏòÏµÊý¡¿*/
-//		Parameter_SelfCheck( (uint32 *)&Direction.UP_P1,  &Normal_Parameter[DIRECTION_UP_P1_e] );		//×ó±êÖ¾Î»Ç°½øÏµÊý
-//		Parameter_SelfCheck( (uint32 *)&Direction.UP_P2,  &Normal_Parameter[DIRECTION_UP_P2_e] );		//ÓÒ±êÖ¾Î»Ç°½øÏµÊý
-//		Parameter_SelfCheck( (uint32 *)&Direction.DOWN_P1,&Normal_Parameter[DIRECTION_DOWN_P1_e] );		//×ó±êÖ¾Î»ºóÍËÏµÊý
-//		Parameter_SelfCheck( (uint32 *)&Direction.DOWN_P2,&Normal_Parameter[DIRECTION_DOWN_P2_e] );		//ÓÒ±êÖ¾Î»ºóÍËÏµÊý
-//		Parameter_SelfCheck( (uint32 *)&Direction.LEFT_P, &Normal_Parameter[DIRECTION_LEFT_P1_e] );		//Ïò×óÏµÊý
-//		Parameter_SelfCheck( (uint32 *)&Direction.RIGHT_P,&Normal_Parameter[DIRECTION_RIGHT_P1_e] );	//ÏòÓÒÏµÊý
-//		
-
+		/* ¡¾ÍÆ½øÆ÷Æ«²îÖµ¡¿*/
+		Parameter_SelfCheck( (uint32 *)&PropellerError.leftUp,&Normal_Parameter[PROPELLER_RIGHT_UP_ERROR_e] );
+		Parameter_SelfCheck( (uint32 *)&PropellerError.leftDown,&Normal_Parameter[PROPELLER_LEFT_DOWN_ERROR_e] );
+		Parameter_SelfCheck( (uint32 *)&PropellerError.leftUp,&Normal_Parameter[PROPELLER_LEFT_UP_ERROR_e] );
+		Parameter_SelfCheck( (uint32 *)&PropellerError.rightDown,&Normal_Parameter[PROPELLER_RIGHT_DOWN_ERROR_e] );
+		Parameter_SelfCheck( (uint32 *)&PropellerError.leftMiddle,&Normal_Parameter[PROPELLER_LEFT_MED_ERROR_e] );
+		Parameter_SelfCheck( (uint32 *)&PropellerError.rightMiddle,&Normal_Parameter[PROPELLER_RIGHT_MED_ERROR_e] );
 }
 /*
 void test_env(void) {
@@ -188,14 +193,16 @@ void Flash_Update(void)
 		
 		ef_port_write(Nor_FLASH_ADDRESS+4*BATTERY_CAPACITY_e ,(uint32 *)&Sensor.PowerSource.Capacity,4); //µç³ØÈÝÁ¿²ÎÊý 3s/4s/6s
 		
-		ef_port_write(Nor_FLASH_ADDRESS+4*DIRECTION_UP_P1_e ,   (uint32 *)&Direction.UP_P1,4);		//×ó±êÖ¾Î»Ç°½øÏµÊý
-		ef_port_write(Nor_FLASH_ADDRESS+4*DIRECTION_UP_P2_e ,   (uint32 *)&Direction.UP_P2,4);		//ÓÒ±êÖ¾Î»Ç°½øÏµÊý
-		ef_port_write(Nor_FLASH_ADDRESS+4*DIRECTION_DOWN_P1_e , (uint32 *)&Direction.DOWN_P1,4);	//×ó±êÖ¾Î»ºóÍËÏµÊý
-		ef_port_write(Nor_FLASH_ADDRESS+4*DIRECTION_DOWN_P2_e , (uint32 *)&Direction.DOWN_P2,4);	//ÓÒ±êÖ¾Î»ºóÍËÏµÊý
-		ef_port_write(Nor_FLASH_ADDRESS+4*DIRECTION_LEFT_P1_e , (uint32 *)&Direction.LEFT_P,4);		//Ïò×óÏµÊý
-		ef_port_write(Nor_FLASH_ADDRESS+4*DIRECTION_RIGHT_P1_e ,(uint32 *)&Direction.RIGHT_P,4);	//ÏòÓÒÏµÊý
-		
+		ef_port_write(Nor_FLASH_ADDRESS+4*EXTRACTOR_VALUE_e ,(uint32 *)&Extractor_Value,4); //ÎüÈ¡Æ÷ÎüÁ¦
 
+		ef_port_write(Nor_FLASH_ADDRESS+4*WORK_MODE_e ,(uint32 *)&WorkMode,4); //¹¤×÷Ä£Ê½
+		
+		ef_port_write(Nor_FLASH_ADDRESS+4*PROPELLER_RIGHT_UP_ERROR_e   ,(uint32 *)&PropellerError.rightUp,4); //
+		ef_port_write(Nor_FLASH_ADDRESS+4*PROPELLER_LEFT_DOWN_ERROR_e  ,(uint32 *)&PropellerError.leftDown,4); //
+		ef_port_write(Nor_FLASH_ADDRESS+4*PROPELLER_LEFT_UP_ERROR_e    ,(uint32 *)&PropellerError.leftUp,4); //
+		ef_port_write(Nor_FLASH_ADDRESS+4*PROPELLER_RIGHT_DOWN_ERROR_e ,(uint32 *)&PropellerError.rightDown,4); //
+		ef_port_write(Nor_FLASH_ADDRESS+4*PROPELLER_LEFT_MED_ERROR_e   ,(uint32 *)&PropellerError.leftMiddle,4); //
+		ef_port_write(Nor_FLASH_ADDRESS+4*PROPELLER_RIGHT_MED_ERROR_e  ,(uint32 *)&PropellerError.rightMiddle,4); //
 }	
 MSH_CMD_EXPORT(Flash_Update,Flash Update);
 
@@ -205,7 +212,9 @@ void list_value(void)
 
 		log_i	("variable  name          value");
     log_i("----------------------   ---------");
+
 		log_i("VehicleMode               %s",VehicleModeName[VehicleMode]);
+		log_i("WorkMode                  %s",WorkModeName[WorkMode]);
 		log_i("Depth Sensor Type         %s",Depth_Sensor_Name[Sensor.DepthSensor.Type]); //Éî¶È´«¸ÐÆ÷ÀàÐÍ
 		log_i("debug_tool                %s",debug_tool_name[debug_tool]);
 	  log_i("----------------------   ---------");
@@ -215,26 +224,35 @@ void list_value(void)
 		log_i("RoboticArm.Speed          %d",RoboticArm.Speed);
 	  log_i("----------------------   ---------");
 	  log_i("YunTai.MaxValue           %d",YunTai.MaxValue);
-	  log_i("YunTai.MinValue           %d",YunTai.MinValue);
 		log_i("YunTai.MedValue           %d",YunTai.MedValue);
+	  log_i("YunTai.MinValue           %d",YunTai.MinValue);
 		log_i("YunTai.CurrentValue       %d",YunTai.CurrentValue);
 		log_i("YunTai.Speed              %d",YunTai.Speed);
 	  log_i("----------------------   ---------");
 	  log_i("Propeller_Max             %d",PropellerParameter.PowerMax);
-	  log_i("Propeller_Min             %d",PropellerParameter.PowerMin);
 		log_i("Propeller_Med             %d",PropellerParameter.PowerMed);
+	  log_i("Propeller_Min             %d",PropellerParameter.PowerMin);
 		log_i("----------------------   ---------");
 		log_i("Compass Offset Angle      %d",Compass_Offset_Angle);//Ö¸ÄÏÕë Æ«ÒÆ½Ç¶È
-		log_i("----------------------   ---------")
-;	  log_i("rightUp_Dir               %d",PropellerDir.rightUp);
+		log_i("----------------------   ---------");
+	  log_i("rightUp_Dir               %d",PropellerDir.rightUp);
 	  log_i("leftDown_Dir              %d",PropellerDir.leftDown);
 		log_i("leftUp_Dir                %d",PropellerDir.leftUp);
 		log_i("rightDown_Dir             %d",PropellerDir.rightDown);
 	  log_i("leftMiddle_Dir            %d",PropellerDir.leftMiddle);
 		log_i("rightMiddle_Dir           %d",PropellerDir.rightMiddle);
-		log_i("Propeller_Power           %d",PowerPercent);//ÍÆ½øÆ÷¶¯Á¦°Ù·Ö±È
+		log_i("Propeller_Power           %d",PowerPercent);//ÍÆ½øÆ÷¶¯Á¦°Ù·Ö±È¡¾²»ÓÃ£¬¶¯Á¦°Ù·Ö±ÈÓÉ¿ØÖÆ×Ö¸øµÄ¡¿
 		log_i("----------------------   ---------");
-		log_i("Battery Capacity          %f",Sensor.PowerSource.Capacity);//µç³ØÈÝÁ¿²ÎÊý
+		log_i("Battery Capacity          %0.3f",Sensor.PowerSource.Capacity);//µç³ØÈÝÁ¿²ÎÊý
+		log_i("----------------------   ---------");
+		log_i("Extractor_Value           %d",Extractor_Value);//ÎüÈ¡Æ÷¶¯Á¦Öµ	
+		log_i("----------------------   ---------");		
+		log_i("rightUp_Error             %d",PropellerError.rightUp);
+	  log_i("leftDown_Error            %d",PropellerError.leftDown);
+		log_i("leftUp_Error              %d",PropellerError.leftUp);
+		log_i("rightDown_Error           %d",PropellerError.rightDown);
+	  log_i("leftMiddle_Error          %d",PropellerError.leftMiddle);
+		log_i("rightMiddle_Error         %d",PropellerError.rightMiddle);
 		
     rt_kprintf("\n");
 }

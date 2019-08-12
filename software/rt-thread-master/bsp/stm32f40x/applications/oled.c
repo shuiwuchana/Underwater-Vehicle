@@ -48,7 +48,8 @@ static uint32 total_mem,used_mem,max_used_mem;
 
 /*--------------------------- Variable Declarations --------------------------------*/
 
-char *VehicleModeName[2] = {"4_AXIS","6_AXIS"}; //定义用于显示的 模式字符 0->AUV  1->ROV
+char *VehicleModeName[2] = {"4_Axis","6_Axis"}; //定义用于显示的 模式字符 0->AUV  1->ROV
+char *WorkModeName[2] = {"Work","Debug"}; //定义用于显示的 工作模式
 volatile MENU_LIST_Enum MENU = StatusPage;//OLED初始页面为 状态页. volatile是一种类型修饰符。
 																				  //volatile 的作用 是作为指令关键字，确保本条指令不会因编译器的优化而省略，且要求每次直接在其内存中读值。
 
@@ -157,7 +158,7 @@ void OLED_StatusPage(void)
 		sprintf(str,"Vol:%.2fV",Sensor.PowerSource.Voltage);//电压
 		OLED_ShowString(0,16,(uint8 *)str,12); 
 		
-		sprintf(str,"Cur:%.2fA",Sensor.PowerSource.Current);//电流
+		sprintf(str,"Cur:%.3f",Sensor.PowerSource.Current);//电流
 		OLED_ShowString(70,16,(uint8 *)str,12); 	
 		
 	  sprintf(str,"CPU:%.2f%% ",Sensor.CPU.Usage);//%字符的转义字符是%%  %这个字符在输出语句是向后匹配的原则

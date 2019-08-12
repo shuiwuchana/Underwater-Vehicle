@@ -26,20 +26,6 @@ typedef struct //推进器方向
 
 typedef struct//调试时各个推进器的偏差量 
 {
-		int16 leftUp;  //左上
-		int16 rightUp;
-		int16 leftDown; //左下
-		int16 rightDown;
-		int16 leftMiddle; //左中
-		int16 rightMiddle;
-
-}PropellerError_Type;//推进器偏移值
-
-
-typedef struct
-{
-	  int16 Power; //推进器动力系数 【不能为负】
-	
 		int16 leftUp;
 		int16 rightUp;
 		int16 leftDown;
@@ -47,38 +33,53 @@ typedef struct
 		int16 leftMiddle;
 		int16 rightMiddle;
 
+}PropellerError_Type;//推进器偏移值
+
+typedef struct
+{
+		int16 Adjust1;
+		int16 Adjust2;
+		int16 Adjust3;
+		int16 Adjust4;
+}Adjust_Parameter; //调节参数
+
+typedef struct
+{
+	  float PowerPercent; //推进器动力百分比
+	
+		short leftUp;
+		short rightUp;
+		short leftDown;
+		short rightDown;
+		short leftMiddle;
+		short rightMiddle;
+
 }PropellerPower_Type;//各个推进器推力
 
 typedef enum
 {
-		Forward   = 1, //前进
-		BackAway  = 2, //后退
-	
-		TurnLeft  = 1, //左转
-		TurnRight = 2, //右转
-	
 		RiseUp    = 1, //上升
 		Dive      = 2, //下潜
-	
-		MoveLeft  = 1, //左移
-		MoveRight = 2, //右移
-
 		Stop      = 0
 		
 }ActionType_Enum; //动作指令枚举
+
+
+void Propeller_Init(void);
+
+void PWM_Update(PropellerPower_Type* power);//推进器PWM 更新
+void Extractor_Control(uint8 *action);
 
 extern PropellerDir_Type PropellerDir;
 extern PropellerParameter_Type PropellerParameter; 
 extern PropellerPower_Type  PropellerPower; //推进器推理控制器
 extern PropellerError_Type  PropellerError; //推进器偏差值
 
-void Propeller_Init(void);
-
-void PWM_Update(PropellerPower_Type* power);//推进器PWM 更新
-
-
-
-
+extern PropellerError_Type Forward;
+extern PropellerError_Type Retreat;
+extern PropellerError_Type TurnLeft;
+extern PropellerError_Type TurnRight;
+extern Adjust_Parameter AdjustParameter;
 
 #endif
 
