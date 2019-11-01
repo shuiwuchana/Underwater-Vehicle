@@ -135,7 +135,7 @@
         <SetRegEntry>
           <Number>0</Number>
           <Key>DLGUARM</Key>
-          <Name></Name>
+          <Name>d</Name>
         </SetRegEntry>
         <SetRegEntry>
           <Number>0</Number>
@@ -154,7 +154,7 @@
           <Type>0</Type>
           <LineNumber>210</LineNumber>
           <EnabledFlag>1</EnabledFlag>
-          <Address>134245646</Address>
+          <Address>134245642</Address>
           <ByteObject>0</ByteObject>
           <HtxType>0</HtxType>
           <ManyObjects>0</ManyObjects>
@@ -170,7 +170,7 @@
           <Type>0</Type>
           <LineNumber>206</LineNumber>
           <EnabledFlag>1</EnabledFlag>
-          <Address>134245632</Address>
+          <Address>134245628</Address>
           <ByteObject>0</ByteObject>
           <HtxType>0</HtxType>
           <ManyObjects>0</ManyObjects>
@@ -186,7 +186,7 @@
           <Type>0</Type>
           <LineNumber>215</LineNumber>
           <EnabledFlag>1</EnabledFlag>
-          <Address>134245660</Address>
+          <Address>134245656</Address>
           <ByteObject>0</ByteObject>
           <HtxType>0</HtxType>
           <ManyObjects>0</ManyObjects>
@@ -202,7 +202,7 @@
           <Type>0</Type>
           <LineNumber>219</LineNumber>
           <EnabledFlag>1</EnabledFlag>
-          <Address>134245674</Address>
+          <Address>134245670</Address>
           <ByteObject>0</ByteObject>
           <HtxType>0</HtxType>
           <ManyObjects>0</ManyObjects>
@@ -218,7 +218,7 @@
           <Type>0</Type>
           <LineNumber>224</LineNumber>
           <EnabledFlag>1</EnabledFlag>
-          <Address>134245688</Address>
+          <Address>134245684</Address>
           <ByteObject>0</ByteObject>
           <HtxType>0</HtxType>
           <ManyObjects>0</ManyObjects>
@@ -234,7 +234,7 @@
           <Type>0</Type>
           <LineNumber>228</LineNumber>
           <EnabledFlag>1</EnabledFlag>
-          <Address>134245702</Address>
+          <Address>134245698</Address>
           <ByteObject>0</ByteObject>
           <HtxType>0</HtxType>
           <ManyObjects>0</ManyObjects>
@@ -250,7 +250,7 @@
           <Type>0</Type>
           <LineNumber>181</LineNumber>
           <EnabledFlag>1</EnabledFlag>
-          <Address>134245576</Address>
+          <Address>134245572</Address>
           <ByteObject>0</ByteObject>
           <HtxType>0</HtxType>
           <ManyObjects>0</ManyObjects>
@@ -266,7 +266,7 @@
           <Type>0</Type>
           <LineNumber>185</LineNumber>
           <EnabledFlag>1</EnabledFlag>
-          <Address>134245590</Address>
+          <Address>134245586</Address>
           <ByteObject>0</ByteObject>
           <HtxType>0</HtxType>
           <ManyObjects>0</ManyObjects>
@@ -282,7 +282,7 @@
           <Type>0</Type>
           <LineNumber>189</LineNumber>
           <EnabledFlag>1</EnabledFlag>
-          <Address>134245604</Address>
+          <Address>134245600</Address>
           <ByteObject>0</ByteObject>
           <HtxType>0</HtxType>
           <ManyObjects>0</ManyObjects>
@@ -298,7 +298,7 @@
           <Type>0</Type>
           <LineNumber>193</LineNumber>
           <EnabledFlag>1</EnabledFlag>
-          <Address>134245618</Address>
+          <Address>134245614</Address>
           <ByteObject>0</ByteObject>
           <HtxType>0</HtxType>
           <ManyObjects>0</ManyObjects>
@@ -490,6 +490,11 @@
           <count>35</count>
           <WinNumber>1</WinNumber>
           <ItemText>Check_Byte</ItemText>
+        </Ww>
+        <Ww>
+          <count>36</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>PropellerError,0x0A</ItemText>
         </Ww>
       </WatchWindow1>
       <MemoryWindow1>
